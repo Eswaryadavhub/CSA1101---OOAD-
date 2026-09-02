@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cors from 'cors';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
@@ -1235,6 +1236,17 @@ app.delete('/api/admin/opportunities/:id', authenticateToken, requireAdmin, asyn
   } catch (error) {
     res.status(500).json({ message: 'Error deleting opportunity.' });
   }
+});
+
+// Serve frontend static build
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+app.get('*', (req: Request, res: Response) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ message: 'API route not found' });
+  }
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
 // Start express server
