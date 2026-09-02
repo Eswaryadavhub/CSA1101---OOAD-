@@ -1,0 +1,157 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   // "STUDENT" or "ADMIN"
+  createdAt    DateTime @default(now())
+  student      Student?
+}
+
+model Student {
+  id                   String             @id @default(uuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  phone                String?
+  location             String?
+  degree               String?
+  department           String?
+  university           String?
+  graduationYear       Int?
+  experienceLevel      String?            // "Entry", "Intermediate", "Advanced"
+  projects             String?            // JSON string or newline-separated text
+  internshipExperience String?            // text description
+  interests            String?            // comma-separated list of categories
+  preferredRole        String?
+  preferredIndustry    String?
+  preferredLocation    String?
+  workType             String?            // "Remote", "Hybrid", "Onsite"
+  
+  skills               StudentSkill[]
+  matches              MatchResult[]
+  savedOpportunities   SavedOpportunity[]
+  applications         Application[]
+}
+
+model Skill {
+  id                String             @id @default(uuid())
+  name              String             @unique
+  category          String             // "Programming", "Database", "Web Development", "Cloud", "AI/ML", "Soft Skills", "Tools"
+  studentSkills     StudentSkill[]
+  opportunitySkills OpportunitySkill[]
+  careerPathSkills  CareerPathSkill[]
+  learningResources LearningResource[]
+}
+
+model StudentSkill {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skillId     String
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  proficiency String   // "Beginner", "Intermediate", "Advanced", "Expert"
+
+  @@unique([studentId, skillId])
+}
+
+model Opportunity {
+  id              String             @id @default(uuid())
+  title           String
+  organization    String
+  description     String
+  type            String             // "Internship", "Job", "Project", "Course"
+  location        String
+  duration        String
+  experienceLevel String             // "Entry", "Intermediate", "Advanced"
+  workType        String             // "Remote", "Hybrid", "Onsite"
+  postedDate      DateTime           @default(now())
+
+  skills             OpportunitySkill[]
+  matches            MatchResult[]
+  savedOpportunities SavedOpportunity[]
+  applications       Application[]
+}
+
+model OpportunitySkill {
+  id            String      @id @default(uuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skillId       String
+  skill         Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  isRequired    Boolean     @default(true) // true for Required, false for Preferred
+
+  @@unique([opportunityId, skillId])
+}
+
+model CareerPath {
+  id           String            @id @default(uuid())
+  title        String            @unique
+  description  String
+  averageSalary String
+  demandLevel  String            // "High", "Medium", "Low"
+  skills       CareerPathSkill[]
+}
+
+model CareerPathSkill {
+  id           String     @id @default(uuid())
+  careerPathId String
+  careerPath   CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  skillId      String
+  skill        Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([careerPathId, skillId])
+}
+
+model LearningResource {
+  id        String @id @default(uuid())
+  skillId   String
+  skill     Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  title     String
+  url       String
+  type      String // "Course", "Video", "Article", "Book"
+  duration  String // e.g. "10 hours", "3 weeks"
+  provider  String // e.g. "Coursera", "Udemy", "YouTube"
+}
+
+model MatchResult {
+  id            String      @id @default(uuid())
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  score         Int
+  detailsJson   String      // Detailed match score breakdown as JSON string
+
+  @@unique([studentId, opportunityId])
+}
+
+model SavedOpportunity {
+  id            String      @id @default(uuid())
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, opportunityId])
+}
+
+model Application {
+  id            String      @id @default(uuid())
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  status        String      // "Applied", "Shortlisted", "Rejected", "Offered"
+  appliedDate   DateTime    @default(now())
+
+  @@unique([studentId, opportunityId])
+}
