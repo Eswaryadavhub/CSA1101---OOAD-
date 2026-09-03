@@ -1,0 +1,41 @@
+Omkar Eswar
+San Francisco, CA | student@skillmatch.com | +1 (555) 019-2834
+LinkedIn: linkedin.com/in/omkar-eswar | GitHub: github.com/eswar
+
+SUMMARY
+Enthusiastic Computer Science undergraduate student with strong foundations in software development, data structures, and web technologies. Passionate about building scalable applications using React, Python, and SQL.
+
+EDUCATION
+Bachelor of Science in Computer Science
+State University, Expected Graduation: May 2027
+GPA: 3.8 / 4.0
+Relevant Coursework: Data Structures, Object-Oriented Analysis & Design, Database Systems, Web Architecture
+
+TECHNICAL SKILLS
+- Programming Languages: Java, Python, JavaScript, TypeScript, C++, SQL
+- Web Frameworks & Libraries: React, Node.js, Express, HTML5, CSS3, Tailwind CSS
+- Databases: PostgreSQL, MongoDB, SQLite, Redis
+- Cloud & DevOps: AWS, Docker, Git, GitHub Actions, Linux
+- AI/ML Tools: PyTorch, Pandas, NumPy, Scikit-Learn
+- Soft Skills: Teamwork, Problem Solving, Communication, Agile/Scrum
+
+EXPERIENCE
+Software Development Intern | Future Tech Labs
+June 2025 - August 2025 | San Francisco, CA
+- Developed RESTful API endpoints using Node.js and Express to serve over 10,000 daily requests.
+- Integrated PostgreSQL database schemas and optimized complex SQL queries to reduce latency by 35%.
+- Collaborated in an Agile team of 6 engineers using Git and Jira.
+
+PROJECTS
+SkillMatch AI - Career Development Platform
+- Architected a full-stack career platform using React, TypeScript, and Tailwind CSS.
+- Implemented weighted matching algorithms calculating compatibility percentages based on skills, education, and preferences.
+- Built interactive dashboards and gap analysis modules for 100+ active opportunity listings.
+
+Smart Task Manager CLI
+- Created a multi-threaded command line productivity tool in Java utilizing SQLite for persistent local storage.
+
+CERTIFICATIONS
+- AWS Certified Cloud Practitioner
+- Complete Python Bootcamp - Coursera Specialization
+- Meta Front-End Developer Certificate

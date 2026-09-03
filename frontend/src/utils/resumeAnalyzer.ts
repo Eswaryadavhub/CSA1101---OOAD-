@@ -14,16 +14,25 @@ export interface ResumeAnalysisResult {
   softSkills: string[];
   programmingLanguages: string[];
   frameworks: string[];
-  toolsAndTech: string[];
+  libraries: string[];
+  databases: string[];
+  cloudTechnologies: string[];
+  developerTools: string[];
   education: string[];
   experience: string[];
   projects: string[];
   certifications: string[];
   keywords: string[];
+  careerDirection: string;
+  strongSkills: string[];
+  skillsToImprove: string[];
+  missingSkills: { name: string; priority: 'High' | 'Medium' | 'Low'; reason: string }[];
+  summary: string;
   resumeStrength: number;
   opportunitiesImproved: number;
   skillGapsIdentified: number;
   rawTextPreview: string;
+  analyzedAt: string;
 }
 
 // Comprehensive taxonomy of skills for accurate text scanning
@@ -245,8 +254,77 @@ export function analyzeResume(text: string, currentStudentSkills: any[] = []): R
     'Full Stack', 'RESTful APIs', 'Agile', 'Scalable Systems'
   ]));
 
-  const detectedSkills = Array.from(detectedMap.values());
-  const newSkillsCount = detectedSkills.filter(s => !s.isExisting).length;
+  // Categorize skills by explicit engineering domain
+  const databases: string[] = [];
+  const cloudTechnologies: string[] = [];
+  const libraries: string[] = [];
+  const developerTools: string[] = [];
+
+  for (const item of detectedSkills) {
+    if (['SQL', 'PostgreSQL', 'MongoDB', 'Redis', 'SQLite'].includes(item.name)) {
+      databases.push(item.name);
+    }
+    if (['AWS', 'Docker', 'Kubernetes', 'Azure', 'CI/CD', 'Linux'].includes(item.name)) {
+      cloudTechnologies.push(item.name);
+    }
+    if (['Pandas', 'NumPy', 'PyTorch', 'TensorFlow', 'Scikit-Learn', 'Redux'].includes(item.name)) {
+      libraries.push(item.name);
+    }
+    if (['Git', 'Jira', 'Figma', 'Postman'].includes(item.name)) {
+      developerTools.push(item.name);
+    }
+  }
+
+  // Infer Career Direction based on detected skill distribution
+  const hasFrontend = detectedSkills.some(s => ['React', 'HTML', 'CSS', 'Angular', 'Vue', 'Next.js'].includes(s.name));
+  const hasBackend = detectedSkills.some(s => ['Node.js', 'Express', 'Java', 'SQL', 'PostgreSQL', 'MongoDB', 'Redis'].includes(s.name));
+  const hasDataAI = detectedSkills.some(s => ['Python', 'Pandas', 'NumPy', 'PyTorch', 'TensorFlow', 'Scikit-Learn', 'Deep Learning'].includes(s.name));
+  const hasCloud = detectedSkills.some(s => ['AWS', 'Docker', 'Kubernetes', 'Azure', 'CI/CD'].includes(s.name));
+
+  let careerDirection = 'Full Stack Software Developer';
+  if (hasFrontend && hasBackend) {
+    careerDirection = 'Full Stack Software Developer';
+  } else if (hasDataAI && (detectedSkills.some(s => ['Pandas', 'PyTorch', 'TensorFlow'].includes(s.name)) || langList.includes('Python'))) {
+    careerDirection = 'AI / Data Science Engineer';
+  } else if (hasCloud && (hasBackend || langList.includes('Go') || langList.includes('Python'))) {
+    careerDirection = 'Cloud & DevOps Engineer';
+  } else if (hasBackend && !hasFrontend) {
+    careerDirection = 'Backend Systems Engineer';
+  } else if (hasFrontend && !hasBackend) {
+    careerDirection = 'Frontend Web Developer';
+  }
+
+  // Strong vs Improvement Skills
+  const strongSkills = detectedSkills
+    .filter(s => s.proficiency === 'Advanced' || s.proficiency === 'Intermediate' || s.relevance >= 85)
+    .map(s => s.name);
+
+  const skillsToImprove = detectedSkills
+    .filter(s => s.proficiency === 'Beginner' || s.relevance < 85)
+    .map(s => s.name);
+
+  // Identify Missing Skills against Target Career Path
+  const targetRequiredMap: Record<string, string[]> = {
+    'Full Stack Software Developer': ['Node.js', 'MongoDB', 'Docker', 'AWS', 'TypeScript', 'SQL'],
+    'Backend Systems Engineer': ['Node.js', 'PostgreSQL', 'Docker', 'Redis', 'System Design'],
+    'AI / Data Science Engineer': ['Pandas', 'PyTorch', 'SQL', 'Docker', 'Scikit-Learn'],
+    'Cloud & DevOps Engineer': ['Docker', 'Kubernetes', 'AWS', 'CI/CD', 'Linux'],
+    'Frontend Web Developer': ['TypeScript', 'Next.js', 'Figma', 'CSS', 'React'],
+  };
+
+  const expectedList = targetRequiredMap[careerDirection] || targetRequiredMap['Full Stack Software Developer'];
+  const detectedNamesLower = detectedSkills.map(s => s.name.toLowerCase());
+
+  const missingSkills: { name: string; priority: 'High' | 'Medium' | 'Low'; reason: string }[] = [];
+  expectedList.forEach(exp => {
+    if (!detectedNamesLower.includes(exp.toLowerCase())) {
+      missingSkills.push({
+        name: exp,
+        priority: missingSkills.length < 2 ? 'High' : 'Medium',
+        reason: `Standard requirement for ${careerDirection} opportunities`,
+      });
+    }
+  });
 
   // Strength score calculation
   let strength = 50;
@@ -257,7 +335,9 @@ export function analyzeResume(text: string, currentStudentSkills: any[] = []): R
   const resumeStrength = Math.min(95, Math.max(65, strength));
 
   const opportunitiesImproved = Math.max(2, Math.min(8, newSkillsCount + 2));
-  const skillGapsIdentified = Math.max(1, 6 - Math.min(5, detectedSkills.length));
+  const skillGapsIdentified = Math.max(missingSkills.length, 2);
+
+  const summary = `Candidate demonstrates verified competence in ${strongSkills.slice(0, 4).join(', ') || 'Software Development'} with practical foundations in ${education[0] || 'Computer Science'}. Optimally primed for ${careerDirection} roles with immediate growth opportunities in ${missingSkills.slice(0, 2).map(m => m.name).join(' & ') || 'cloud containerization'}.`;
 
   return {
     detectedSkills,
@@ -265,15 +345,24 @@ export function analyzeResume(text: string, currentStudentSkills: any[] = []): R
     softSkills: softList,
     programmingLanguages: langList,
     frameworks: frameworkList,
-    toolsAndTech: toolsList,
+    libraries,
+    databases,
+    cloudTechnologies,
+    developerTools: toolsList,
     education: education.slice(0, 4),
     experience: experience.slice(0, 4),
     projects: projects.slice(0, 4),
     certifications: certifications.slice(0, 4),
     keywords,
+    careerDirection,
+    strongSkills,
+    skillsToImprove,
+    missingSkills,
+    summary,
     resumeStrength,
     opportunitiesImproved,
     skillGapsIdentified,
     rawTextPreview: text.slice(0, 600) + (text.length > 600 ? '...' : ''),
+    analyzedAt: new Date().toISOString(),
   };
 }

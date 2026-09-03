@@ -1,0 +1,39 @@
+Priya Sharma
+Data Science & AI Undergraduate
+San Jose, CA | priya.sharma@example.com | +1 (555) 234-5678
+LinkedIn: linkedin.com/in/priya-sharma | GitHub: github.com/priyadata
+
+SUMMARY
+Aspiring AI & Machine Learning Engineer with practical experience in Python, Pandas, statistical modeling, and deep learning architectures. Passionate about neural network optimization and data analytics.
+
+EDUCATION
+Bachelor of Science in Data Science & Artificial Intelligence
+University of California, Expected May 2026
+GPA: 3.9 / 4.0
+Relevant Coursework: Machine Learning, Deep Neural Networks, Applied Statistics, Database Management
+
+TECHNICAL SKILLS
+- Programming: Python, SQL, C++, R
+- Data Science & ML Libraries: Pandas, NumPy, Scikit-Learn, PyTorch, TensorFlow, Matplotlib
+- Databases: PostgreSQL, SQLite
+- Developer Tools: Git, Jupyter Notebooks, Linux
+- Soft Skills: Analytical Thinking, Research, Teamwork, Problem Solving
+
+EXPERIENCE
+Machine Learning Research Assistant | AI Innovation Lab
+January 2025 - Present | San Jose, CA
+- Trained convolutional neural networks in PyTorch for image segmentation achieving 92.4% accuracy.
+- Processed and cleansed large tabular datasets using Pandas and NumPy pipelines.
+- Evaluated models using cross-validation and hyperparameter tuning in Scikit-Learn.
+
+PROJECTS
+Predictive Customer Churn Classifier
+- Built an end-to-end classification pipeline in Python and Scikit-Learn with 89% precision.
+- Stored feature store tables in PostgreSQL and queried via SQL.
+
+Automated Image Captioning with PyTorch
+- Developed a sequence-to-sequence neural network model using PyTorch and pretrained ResNet embeddings.
+
+CERTIFICATIONS
+- Deep Learning Specialization - DeepLearning.AI
+- IBM Data Science Professional Certificate

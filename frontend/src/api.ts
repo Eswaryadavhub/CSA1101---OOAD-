@@ -297,4 +297,13 @@ export const api = {
       return mockStore.deleteOpportunity(id);
     }
   },
+
+  // Resume Profile Management
+  getResumeProfile() {
+    return mockStore.getResumeProfile();
+  },
+
+  setResumeProfile(profile: any) {
+    return mockStore.setResumeProfile(profile);
+  },
 };

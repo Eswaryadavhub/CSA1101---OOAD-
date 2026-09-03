@@ -384,7 +384,9 @@ export default function App() {
               )}
 
               {currentPage === 'learning' && user.role === 'STUDENT' && (
-                <LearningPlanPage />
+                <LearningPlanPage 
+                  onNavigate={(page) => setCurrentPage(page)}
+                />
               )}
 
               {currentPage === 'saved' && user.role === 'STUDENT' && (

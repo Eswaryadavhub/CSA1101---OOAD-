@@ -1,5 +1,6 @@
 import { MatchingEngine } from './services/MatchingEngine';
 import type { StudentProfileData, OpportunityData } from './services/MatchingEngine';
+import { ResourceRecommendationEngine } from './services/ResourceRecommendationEngine';
 
 // Master Skills
 export const MASTER_SKILLS = [
@@ -418,6 +419,48 @@ export const mockStore = {
     return updated;
   },
 
+  getResumeProfile() {
+    return getStorage('resume_profile', null);
+  },
+
+  setResumeProfile(resumeProfile: any) {
+    setStorage('resume_profile', resumeProfile);
+
+    // If new resume has detected skills, merge into student skills
+    if (resumeProfile && Array.isArray(resumeProfile.detectedSkills)) {
+      const skills = getStorage('student_skills', INITIAL_STUDENT_SKILLS);
+      resumeProfile.detectedSkills.forEach((ds: any) => {
+        const existingIdx = skills.findIndex((s: any) => s.skill.name.toLowerCase() === ds.name.toLowerCase());
+        if (existingIdx >= 0) {
+          skills[existingIdx].proficiency = ds.proficiency || skills[existingIdx].proficiency;
+        } else {
+          let masterSkill = MASTER_SKILLS.find(s => s.name.toLowerCase() === ds.name.toLowerCase());
+          if (!masterSkill) {
+            masterSkill = {
+              id: `sk_${ds.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+              name: ds.name,
+              category: ds.category || 'General',
+            };
+          }
+          skills.push({
+            id: `ss_${ds.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+            skillId: masterSkill.id,
+            skill: masterSkill,
+            proficiency: ds.proficiency || 'Intermediate',
+          });
+        }
+      });
+      setStorage('student_skills', skills);
+    }
+
+    // Update career direction if inferred from resume
+    if (resumeProfile?.careerDirection) {
+      this.updateProfile({ preferredRole: resumeProfile.careerDirection });
+    }
+
+    return resumeProfile;
+  },
+
   getSkills() {
     const studentSkills = getStorage('student_skills', INITIAL_STUDENT_SKILLS);
     return {
@@ -613,25 +656,23 @@ export const mockStore = {
   },
 
   getLearningPath() {
-    const gaps = this.getSkillGaps();
-    const gapNames = gaps.map(g => g.name.toLowerCase());
+    const resumeProfile = this.getResumeProfile();
+    const studentProfile = this.getProfile();
+    const { studentSkills } = this.getSkills();
+    const opportunities = this.getMatches();
 
-    const recommended = INITIAL_RESOURCES.filter(r => 
-      gapNames.includes(r.skill.name.toLowerCase())
-    ).map(r => {
-      const matchingGap = gaps.find(g => g.name.toLowerCase() === r.skill.name.toLowerCase());
-      return {
-        ...r,
-        priority: matchingGap?.priority || 'Medium',
-      };
+    const plan = ResourceRecommendationEngine.generatePlan({
+      resumeProfile,
+      studentProfile,
+      currentSkills: studentSkills.map((s: any) => ({
+        name: s.skill?.name || s.name,
+        category: s.skill?.category || s.category,
+        proficiency: s.proficiency || 'Intermediate',
+      })),
+      opportunities,
     });
 
-    const fallbackList = INITIAL_RESOURCES.slice(0, 6).map(r => ({
-      ...r,
-      priority: 'Medium',
-    }));
-
-    return recommended.length > 0 ? recommended : fallbackList;
+    return plan;
   },
 
   applyOpportunity(_opportunityId: string) {

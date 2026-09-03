@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Clock, AlertTriangle, BookMarked, ExternalLink, RefreshCw } from 'lucide-react';
+import { 
+  BookOpen, Clock, AlertTriangle, BookMarked, ExternalLink, 
+  RefreshCw, Sparkles, CheckCircle2, Award, PlayCircle, 
+  FileCode, Layers, ShieldCheck, Compass, ArrowUpRight, UploadCloud
+} from 'lucide-react';
 import { api } from '../api';
 
-export const LearningPlanPage: React.FC = () => {
+interface LearningPlanPageProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const LearningPlanPage: React.FC<LearningPlanPageProps> = ({ onNavigate }) => {
   const [learningPath, setLearningPath] = useState<any[]>([]);
+  const [resumeProfile, setResumeProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   
   // Custom completion statuses that persist in localStorage
   const [statuses, setStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchLearningPath();
+    fetchData();
     try {
       const cached = localStorage.getItem('skillmatch_learning_statuses');
       if (cached) {
@@ -22,23 +32,43 @@ export const LearningPlanPage: React.FC = () => {
     }
   }, []);
 
-  const fetchLearningPath = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await api.getLearningPath();
-      if (Array.isArray(data)) {
-        setLearningPath(data);
-      } else if (data && Array.isArray((data as any).resources)) {
-        setLearningPath((data as any).resources);
+      const [pathData, rProfile] = await Promise.all([
+        api.getLearningPath(),
+        api.getResumeProfile ? api.getResumeProfile() : null,
+      ]);
+
+      if (Array.isArray(pathData)) {
+        setLearningPath(pathData);
+      } else if (pathData && Array.isArray((pathData as any).resources)) {
+        setLearningPath((pathData as any).resources);
       } else {
         setLearningPath([]);
       }
+
+      setResumeProfile(rProfile);
     } catch (err: any) {
       console.error('Error fetching learning plan:', err);
       setError(err.message || 'Unable to generate learning plan at this moment.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    setRefreshing(true);
+    try {
+      const data = await api.getLearningPath();
+      if (Array.isArray(data)) {
+        setLearningPath(data);
+      }
+    } catch (err) {
+      console.error('Error regenerating plan:', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -52,18 +82,29 @@ export const LearningPlanPage: React.FC = () => {
     }
   };
 
-  const getSkillName = (skill: any): string => {
-    if (!skill) return 'Career Development';
-    if (typeof skill === 'string') return skill;
-    if (typeof skill === 'object' && skill.name) return String(skill.name);
-    return 'Technical';
+  const getSourceIcon = (source: string) => {
+    switch (source) {
+      case 'YouTube':
+        return <PlayCircle className="w-4 h-4 text-red-600" />;
+      case 'freeCodeCamp':
+        return <FileCode className="w-4 h-4 text-amber-600" />;
+      case 'Coursera':
+        return <Award className="w-4 h-4 text-blue-600" />;
+      case 'Official Documentation':
+      case 'MDN Web Docs':
+        return <BookOpen className="w-4 h-4 text-emerald-600" />;
+      case 'AWS Training':
+        return <Layers className="w-4 h-4 text-orange-500" />;
+      default:
+        return <ExternalLink className="w-4 h-4 text-blue-500" />;
+    }
   };
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 animate-fade-in-up">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-brand-900 rounded-full animate-spin" />
-        <span className="font-bold text-slate-600">Generating personalized learning plan...</span>
+        <span className="font-bold text-slate-600">Analyzing resume & generating dynamic learning recommendations...</span>
       </div>
     );
   }
@@ -77,7 +118,7 @@ export const LearningPlanPage: React.FC = () => {
         <h2 className="font-extrabold text-xl text-brand-900">Error Generating Plan</h2>
         <p className="text-slate-500 text-sm">{error}</p>
         <button 
-          onClick={fetchLearningPath} 
+          onClick={fetchData} 
           className="mt-2 px-6 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm transition-all"
         >
           <RefreshCw className="w-4 h-4" /> Try Again
@@ -87,14 +128,91 @@ export const LearningPlanPage: React.FC = () => {
   }
 
   const safeList = Array.isArray(learningPath) ? learningPath : [];
+  const completedCount = safeList.filter(item => statuses[item.id] === 'Completed').length;
+  const inProgressCount = safeList.filter(item => statuses[item.id] === 'In Progress').length;
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in-up">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-brand-900">Personalized Learning Plan</h1>
-        <p className="text-slate-500 font-medium">Curated courses, certifications, and resources mapped directly to resolve identified skill gaps across matched opportunities.</p>
+    <div className="flex flex-col gap-8 animate-fade-in-up max-w-7xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col gap-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-semibold text-xs w-fit">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            Resume-Driven Learning Intelligence
+          </div>
+          <h1 className="text-3xl font-extrabold text-brand-900 tracking-tight">Personalized Learning Plan</h1>
+          <p className="text-slate-500 font-medium">
+            Dynamic educational roadmap tailored specifically to your uploaded resume, target opportunities, and verified skill gaps.
+          </p>
+        </div>
+
+        <button
+          onClick={handleRegenerate}
+          disabled={refreshing}
+          className="px-4 py-2.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-all shrink-0"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Recalculating...' : 'Regenerate Recommendations'}
+        </button>
       </div>
 
+      {/* Resume Context Banner */}
+      {resumeProfile ? (
+        <div className="bg-gradient-to-r from-brand-900 via-slate-900 to-blue-950 text-white rounded-3xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                Active Resume Profile
+              </span>
+              {resumeProfile.fileName && (
+                <span className="text-xs text-slate-300 font-mono truncate max-w-xs">&bull; {resumeProfile.fileName}</span>
+              )}
+            </div>
+            <h2 className="text-xl font-extrabold tracking-tight">
+              Target Track: <span className="text-blue-300">{resumeProfile.careerDirection || 'Full Stack Software Developer'}</span>
+            </h2>
+            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+              {resumeProfile.summary || 'Recommendations are dynamically derived from your extracted skills, project history, and target opportunities.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 shrink-0 bg-white/5 border border-white/10 p-4 rounded-2xl">
+            <div className="flex flex-col text-center">
+              <span className="text-2xl font-black text-white">{safeList.length}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resources</span>
+            </div>
+            <div className="w-[1px] h-8 bg-white/10" />
+            <div className="flex flex-col text-center">
+              <span className="text-2xl font-black text-amber-400">{inProgressCount}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">In Progress</span>
+            </div>
+            <div className="w-[1px] h-8 bg-white/10" />
+            <div className="flex flex-col text-center">
+              <span className="text-2xl font-black text-green-400">{completedCount}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex items-center gap-3">
+            <Compass className="w-5 h-5 text-blue-600 shrink-0" />
+            <span className="text-xs font-semibold text-slate-600">
+              Want even higher personalization? Upload your resume in the <span className="font-bold text-brand-900">AI Resume Analyzer</span> to target exact missing skills.
+            </span>
+          </div>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('resume-analyzer')}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5" /> Upload Resume
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Recommended Learning Items List */}
       {safeList.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center flex flex-col items-center justify-center gap-4 shadow-sm">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -102,7 +220,7 @@ export const LearningPlanPage: React.FC = () => {
           </div>
           <span className="font-extrabold text-xl text-brand-900">No Learning Path Generated</span>
           <p className="text-slate-500 text-sm max-w-md">
-            Complete your profile and add skills to generate your personalized learning plan.
+            Complete your profile and add skills or upload your resume to generate your personalized learning plan.
           </p>
         </div>
       ) : (
@@ -110,18 +228,24 @@ export const LearningPlanPage: React.FC = () => {
           {safeList.map((item, idx) => {
             const itemId = item.id || `item_${idx}`;
             const currentStatus = statuses[itemId] || 'Not Started';
-            const skillName = getSkillName(item.skill);
-            const resourceType = item.type || item.resourceType || 'Course';
-            const priority = item.priority || 'Medium';
+            const skillName = typeof item.skill === 'string' ? item.skill : (item.skill?.name || 'Software Development');
+            const resourceType = item.resourceType || item.type || 'Video Course';
+            const priority = item.priority || 'Medium Priority';
+            const source = item.source || item.provider || 'Online Resource';
             const duration = item.duration || 'Self-paced';
-            const provider = item.provider || 'Online Resource';
             const courseUrl = item.url || '#';
-            
-            const badgeClass = priority === 'High' 
-              ? 'bg-red-50 text-red-600 border-red-200' 
-              : priority === 'Low'
-                ? 'bg-slate-100 text-slate-600 border-slate-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200';
+            const actionText = item.actionText || (source === 'YouTube' ? 'Watch on YouTube' : 'Start Learning');
+            const whyRecommended = item.whyRecommended || `Recommended to strengthen qualifications for target ${skillName} roles.`;
+            const description = item.description || `Comprehensive training resource covering core ${skillName} concepts and industry applications.`;
+
+            // Priority styling
+            const isHigh = priority.includes('High');
+            const isMedium = priority.includes('Medium');
+            const priorityClass = isHigh
+              ? 'bg-red-50 text-red-700 border-red-200'
+              : isMedium
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-slate-100 text-slate-700 border-slate-200';
 
             const statusColor = currentStatus === 'Completed'
               ? 'bg-green-50 text-green-700 border-green-200'
@@ -132,52 +256,86 @@ export const LearningPlanPage: React.FC = () => {
             return (
               <div 
                 key={itemId} 
-                className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:shadow-md transition-shadow"
+                className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8 flex flex-col gap-6 hover:shadow-md transition-all"
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-brand-900 shrink-0">
-                    <BookOpen className="w-6 h-6 text-blue-600" />
+                {/* Header row */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="px-3 py-1 bg-brand-900 text-white rounded-xl text-xs font-bold tracking-tight">
+                      {skillName}
+                    </span>
+
+                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${priorityClass}`}>
+                      {priority}
+                    </span>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
+                      {getSourceIcon(source)}
+                      <span>Source: {source}</span>
+                    </div>
+
+                    <span className="text-xs text-slate-400 font-semibold">&bull; {resourceType}</span>
                   </div>
-                  
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">{skillName} &bull; {resourceType}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${badgeClass}`}>
-                        {priority} Priority
-                      </span>
-                    </div>
-                    
-                    <h3 className="font-bold text-lg text-brand-900 leading-snug">{item.title}</h3>
-                    
-                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-400">
-                      <span>Provider: <span className="text-slate-600">{provider}</span></span>
-                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {duration}</span>
-                    </div>
+
+                  <div className="flex items-center gap-3 text-xs font-semibold text-slate-400">
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {duration}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 self-end md:self-center shrink-0 w-full md:w-auto border-t border-slate-100 pt-4 md:border-t-0 md:pt-0">
+                {/* Title & Description */}
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-extrabold text-xl text-brand-900 leading-snug">
+                    {item.title}
+                  </h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    {description}
+                  </p>
+                </div>
+
+                {/* Why This is Recommended Callout Box */}
+                <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-extrabold text-brand-900 uppercase tracking-wider">Why Recommended for You:</span>
+                    <p className="text-xs font-medium text-slate-700 leading-relaxed">
+                      {whyRecommended}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer Controls & Direct Link */}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100">
                   {/* Status Dropdown */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-500">Learning Status:</span>
                     <select
                       value={currentStatus}
                       onChange={(e) => updateStatus(itemId, e.target.value)}
-                      className={`px-3 py-1.5 rounded-lg border font-bold text-xs cursor-pointer ${statusColor}`}
+                      className={`px-3 py-1.5 rounded-xl border font-bold text-xs cursor-pointer transition-all ${statusColor}`}
                     >
                       <option value="Not Started">Not Started</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Completed">Completed</option>
                     </select>
+                    {currentStatus === 'Completed' && (
+                      <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Finished
+                      </span>
+                    )}
                   </div>
 
-                  {/* Course Action */}
-                  <button
-                    onClick={() => window.open(courseUrl, '_blank', 'noopener,noreferrer')}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand-900 text-white rounded-xl hover:bg-brand-800 font-bold text-xs shadow-sm transition-all h-fit mt-3 sm:mt-0"
+                  {/* Direct Action Link */}
+                  <a
+                    href={courseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-md shadow-brand-900/15 transition-all hover:scale-[1.02]"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> Start Course
-                  </button>
+                    <span>{actionText}</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
             );

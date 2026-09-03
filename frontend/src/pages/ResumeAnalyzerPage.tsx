@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, Upload, CheckCircle, Plus, X, Sparkles, TrendingUp, 
   Award, BookOpen, Briefcase, GraduationCap, ArrowRight, 
-  Check, AlertCircle, RefreshCw, Eye
+  Check, AlertCircle, RefreshCw, Eye, Target, Compass, ArrowUpRight,
+  Code2, Database, Cloud, Wrench, ChevronRight
 } from 'lucide-react';
 import { extractResumeText } from '../utils/resumeExtractor';
 import { analyzeResume } from '../utils/resumeAnalyzer';
@@ -29,8 +30,32 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
   const [ignoredSkillNames, setIgnoredSkillNames] = useState<string[]>([]);
   const [addingSkillName, setAddingSkillName] = useState<string | null>(null);
   const [showRawText, setShowRawText] = useState(false);
+  const [recommendedOpps, setRecommendedOpps] = useState<any[]>([]);
+  const [recommendedPlan, setRecommendedPlan] = useState<any[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Load previously analyzed resume profile if present
+    const existing = api.getResumeProfile ? api.getResumeProfile() : null;
+    if (existing) {
+      setResult(existing);
+      loadPreviews();
+    }
+  }, []);
+
+  const loadPreviews = async () => {
+    try {
+      const [opps, plan] = await Promise.all([
+        api.getOpportunities(),
+        api.getLearningPath(),
+      ]);
+      setRecommendedOpps((opps || []).slice(0, 3));
+      setRecommendedPlan((plan || []).slice(0, 3));
+    } catch (err) {
+      console.error('Error loading previews:', err);
+    }
+  };
 
   const handleFileSelect = (selectedFile: File) => {
     const ext = selectedFile.name.toLowerCase();
@@ -63,10 +88,30 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
       if (!rawText || rawText.trim().length < 20) {
         throw new Error('Unable to extract sufficient text from the resume. Please ensure the document contains readable text.');
       }
+      
       const analysis = analyzeResume(rawText, currentSkills);
       setResult(analysis);
       setAddedSkillNames([]);
       setIgnoredSkillNames([]);
+
+      // AUTOMATIC RESUME-BASED PROFILE INTEGRATION
+      // Save this structured profile as the active resume profile
+      const storedProfile = {
+        ...analysis,
+        fileName: file.name,
+      };
+      api.setResumeProfile(storedProfile);
+
+      // Notify parent to refresh Student Dashboard, Skills, Opportunities, Matches, Gaps, Career Paths, and Learning Plan
+      onSkillsUpdated();
+
+      // Refresh opportunity matches and learning plan previews
+      const [opps, plan] = await Promise.all([
+        api.getOpportunities(),
+        api.getLearningPath(),
+      ]);
+      setRecommendedOpps((opps || []).slice(0, 3));
+      setRecommendedPlan((plan || []).slice(0, 3));
     } catch (err: any) {
       console.error('Resume analysis error:', err);
       setError(err.message || 'An error occurred during resume analysis. Please try again or upload a TXT/DOCX copy.');
@@ -85,6 +130,7 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
       });
       setAddedSkillNames(prev => [...prev, skill.name]);
       onSkillsUpdated();
+      loadPreviews();
     } catch (err: any) {
       console.error('Error adding detected skill:', err);
     } finally {
@@ -115,6 +161,7 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
       }
     }
     onSkillsUpdated();
+    loadPreviews();
   };
 
   const visibleSkills = result?.detectedSkills.filter(
@@ -127,11 +174,11 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
       <div className="flex flex-col gap-1">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-semibold text-xs w-fit">
           <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          Natural Language Resume Intelligence
+          Autonomous Resume-Based Intelligence
         </div>
         <h1 className="text-3xl font-extrabold text-brand-900 tracking-tight">AI Resume Analyzer</h1>
         <p className="text-slate-500 font-medium">
-          Upload your resume in PDF, DOCX, or TXT format. Our parser extracts your technical capabilities, education, and project background to instantly boost your match scores and recommendations.
+          Upload your resume in PDF, DOCX, or TXT format. The system automatically creates your Resume Profile and updates your Skills, Opportunity Matches, Skill Gaps, and Personalized Learning Plan.
         </p>
       </div>
 
@@ -217,49 +264,126 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
       {/* Analysis Results Display */}
       {result && (
         <div className="flex flex-col gap-8 animate-fade-in-up">
-          {/* Resume Match Summary Widgets */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
-              <div className="flex flex-col gap-1">
+          {/* Resume Profile Summary Card */}
+          <div className="bg-gradient-to-br from-brand-900 via-slate-900 to-blue-950 text-white rounded-3xl p-8 shadow-xl flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-0.5 rounded-full bg-blue-500/25 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider">
+                    Structured Resume Profile
+                  </span>
+                  <span className="text-xs text-slate-400">Synchronized with Student Profile</span>
+                </div>
+                <h2 className="text-2xl font-black tracking-tight">
+                  Career Direction: <span className="text-blue-300">{result.careerDirection || 'Full Stack Software Developer'}</span>
+                </h2>
+              </div>
+
+              {/* Primary CTA button requested by user */}
+              <button
+                onClick={() => onNavigate('learning')}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] shrink-0"
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate Personalized Learning Plan
+              </button>
+            </div>
+
+            <p className="text-slate-300 text-sm leading-relaxed max-w-4xl">
+              {result.summary}
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Resume Strength</span>
-                <span className="text-3xl font-extrabold text-brand-900">{result.resumeStrength}%</span>
-                <span className="text-[11px] font-semibold text-green-600">Well Optimized</span>
+                <span className="text-3xl font-black text-white mt-1">{result.resumeStrength}%</span>
+                <span className="text-[10px] text-green-400 font-semibold mt-0.5">High Potential</span>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-            </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Skills Detected</span>
-                <span className="text-3xl font-extrabold text-brand-900">{result.detectedSkills.length}</span>
-                <span className="text-[11px] font-semibold text-slate-500">Across All Categories</span>
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Detected Skills</span>
+                <span className="text-3xl font-black text-white mt-1">{result.detectedSkills.length}</span>
+                <span className="text-[10px] text-blue-300 font-semibold mt-0.5">Categorized</span>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Award className="w-6 h-6" />
-              </div>
-            </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
-              <div className="flex flex-col gap-1">
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Opportunities Improved</span>
-                <span className="text-3xl font-extrabold text-blue-600">+{result.opportunitiesImproved}</span>
-                <span className="text-[11px] font-semibold text-slate-500">Higher Match Rates</span>
+                <span className="text-3xl font-black text-blue-400 mt-1">+{result.opportunitiesImproved}</span>
+                <span className="text-[10px] text-slate-300 font-semibold mt-0.5">Recalculated</span>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Briefcase className="w-6 h-6" />
+
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Skill Gaps Identified</span>
+                <span className="text-3xl font-black text-amber-400 mt-1">{result.skillGapsIdentified}</span>
+                <span className="text-[10px] text-amber-200/80 font-semibold mt-0.5">Targeted in Plan</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Strong Skills, Skills to Improve, Missing Skills Comparison Card */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Strong Skills */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="font-extrabold text-sm text-brand-900 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" /> Strong Skills
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-bold border border-green-200">
+                  {result.strongSkills.length} Verified
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Demonstrated with solid foundation or intermediate/advanced proficiency in your resume.</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {result.strongSkills.map(sk => (
+                  <span key={sk} className="px-3 py-1 bg-green-50 text-green-800 border border-green-200 rounded-xl text-xs font-bold">
+                    {sk}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Skill Gaps Identified</span>
-                <span className="text-3xl font-extrabold text-amber-600">{result.skillGapsIdentified}</span>
-                <span className="text-[11px] font-semibold text-slate-500">Target for Learning</span>
+            {/* Skills to Improve */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="font-extrabold text-sm text-brand-900 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-blue-600" /> Skills to Improve
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                  {result.skillsToImprove.length} In Progress
+                </span>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <BookOpen className="w-6 h-6" />
+              <p className="text-xs text-slate-500 font-medium">Detected with entry-level or foundational exposure. Advancing these will expand match eligibility.</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {result.skillsToImprove.length > 0 ? (
+                  result.skillsToImprove.map(sk => (
+                    <span key={sk} className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-xl text-xs font-bold">
+                      {sk}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400 font-medium">All detected skills possess intermediate+ proficiency.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Missing Skills */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="font-extrabold text-sm text-brand-900 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-amber-600" /> Missing Target Skills
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
+                  {result.missingSkills.length} Prioritized
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Core requirements across matched opportunities in your {result.careerDirection} path.</p>
+              <div className="flex flex-col gap-2 pt-1">
+                {result.missingSkills.map(m => (
+                  <div key={m.name} className="flex items-center justify-between p-2 rounded-xl bg-amber-50/50 border border-amber-200 text-xs">
+                    <span className="font-bold text-amber-900">{m.name}</span>
+                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">{m.priority} Priority</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -269,7 +393,9 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
             <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-xl font-extrabold text-brand-900">Skills Detected from Your Resume</h2>
-                <p className="text-slate-500 text-sm font-medium">Review the detected skills below. You can confirm adding each skill to your profile or ignore it.</p>
+                <p className="text-slate-500 text-sm font-medium">
+                  Review and confirm individual detected skills. All confirmed skills dynamically boost your compatibility scores.
+                </p>
               </div>
 
               {visibleSkills.some(s => !s.isExisting && !addedSkillNames.includes(s.name)) && (
@@ -351,152 +477,165 @@ export const ResumeAnalyzerPage: React.FC<ResumeAnalyzerPageProps> = ({
             )}
           </div>
 
-          {/* Structured Analysis Results Section */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Technical Skills Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-blue-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <Award className="w-4 h-4" /> Technical Skills
+          {/* Categorized Skills Breakdown Cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-3">
+              <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Code2 className="w-4 h-4" /> Languages & Web
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[...result.programmingLanguages, ...result.frameworks].map(s => (
+                  <span key={s} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">
+                    {s}
+                  </span>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {result.technicalSkills.length > 0 ? (
-                  result.technicalSkills.map(sk => (
-                    <span key={sk} className="px-3 py-1 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl">
-                      {sk}
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-3">
+              <span className="text-xs font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Database className="w-4 h-4" /> Databases & Storage
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {result.databases.length > 0 ? (
+                  result.databases.map(s => (
+                    <span key={s} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-100">
+                      {s}
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-slate-400 font-medium">None detected</span>
+                  <span className="text-xs text-slate-400">None detected</span>
                 )}
               </div>
             </div>
 
-            {/* Soft Skills Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-indigo-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <Sparkles className="w-4 h-4" /> Soft Skills
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {result.softSkills.length > 0 ? (
-                  result.softSkills.map(sk => (
-                    <span key={sk} className="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-100">
-                      {sk}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-3">
+              <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Cloud className="w-4 h-4" /> Cloud & DevOps
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {result.cloudTechnologies.length > 0 ? (
+                  result.cloudTechnologies.map(s => (
+                    <span key={s} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-100">
+                      {s}
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-slate-400 font-medium">None detected</span>
+                  <span className="text-xs text-slate-400">None detected</span>
                 )}
               </div>
             </div>
 
-            {/* Education Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-emerald-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <GraduationCap className="w-4 h-4" /> Education
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-3">
+              <span className="text-xs font-extrabold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench className="w-4 h-4" /> Tools & Libraries
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[...result.libraries, ...result.developerTools].length > 0 ? (
+                  [...result.libraries, ...result.developerTools].map(s => (
+                    <span key={s} className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-100">
+                      {s}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">None detected</span>
+                )}
               </div>
-              <ul className="flex flex-col gap-2 text-xs font-semibold text-slate-600 list-disc list-inside">
-                {result.education.map((edu, idx) => (
-                  <li key={idx} className="leading-relaxed">{edu}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Experience Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-purple-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <Briefcase className="w-4 h-4" /> Experience
-              </div>
-              <ul className="flex flex-col gap-2 text-xs font-semibold text-slate-600 list-disc list-inside">
-                {result.experience.map((exp, idx) => (
-                  <li key={idx} className="leading-relaxed">{exp}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Projects Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-amber-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <FileText className="w-4 h-4" /> Projects
-              </div>
-              <ul className="flex flex-col gap-2 text-xs font-semibold text-slate-600 list-disc list-inside">
-                {result.projects.map((proj, idx) => (
-                  <li key={idx} className="leading-relaxed">{proj}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Certifications Card */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-cyan-600 font-extrabold text-sm uppercase tracking-wider border-b border-slate-100 pb-3">
-                <CheckCircle className="w-4 h-4" /> Certifications
-              </div>
-              <ul className="flex flex-col gap-2 text-xs font-semibold text-slate-600 list-disc list-inside">
-                {result.certifications.map((cert, idx) => (
-                  <li key={idx} className="leading-relaxed">{cert}</li>
-                ))}
-              </ul>
             </div>
           </div>
 
-          {/* Recommended Next Steps */}
-          <div className="bg-gradient-to-br from-brand-900 to-slate-900 text-white rounded-3xl p-8 shadow-xl flex flex-col gap-6">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-xl font-extrabold">Recommended Next Steps</h3>
-              <p className="text-slate-300 text-sm">Follow these action items to maximize your opportunity matches with your updated skills:</p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div 
-                onClick={() => onNavigate('skills')}
-                className="bg-white/10 hover:bg-white/15 p-5 rounded-2xl border border-white/10 flex flex-col justify-between gap-4 cursor-pointer transition-all hover:scale-[1.02]"
-              >
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Step 1</span>
-                  <span className="font-extrabold text-sm">Add Detected Skills to Profile</span>
-                  <p className="text-xs text-slate-300 leading-relaxed">Save detected skills to increase your registered technical breadth.</p>
+          {/* Recommended Opportunities & Learning Plan Live Previews */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Opportunities Preview */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm flex flex-col justify-between gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2 font-extrabold text-lg text-brand-900">
+                    <Briefcase className="w-5 h-5 text-blue-600" />
+                    Recommended Opportunities
+                  </div>
+                  <button 
+                    onClick={() => onNavigate('opportunities')}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    View All <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <span className="text-xs font-bold text-blue-300 flex items-center gap-1">Go to Skills <ArrowRight className="w-3.5 h-3.5" /></span>
+
+                <div className="flex flex-col gap-3">
+                  {recommendedOpps.map((opp) => (
+                    <div 
+                      key={opp.id} 
+                      onClick={() => onNavigate('opportunities')}
+                      className="p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-slate-50/70 transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-extrabold text-sm text-brand-900">{opp.title}</span>
+                        <span className="text-xs text-slate-400 font-semibold">{opp.organization} &bull; {opp.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-black text-blue-600">{opp.matchScore || 85}%</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Match</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div 
+              <button
                 onClick={() => onNavigate('opportunities')}
-                className="bg-white/10 hover:bg-white/15 p-5 rounded-2xl border border-white/10 flex flex-col justify-between gap-4 cursor-pointer transition-all hover:scale-[1.02]"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-brand-900 font-bold text-xs rounded-xl transition-all text-center"
               >
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-bold text-green-300 uppercase tracking-wider">Step 2</span>
-                  <span className="font-extrabold text-sm">View Updated Opportunities</span>
-                  <p className="text-xs text-slate-300 leading-relaxed">Browse newly recalculated match scores across internships and jobs.</p>
+                Browse All Matched Opportunities
+              </button>
+            </div>
+
+            {/* Recommended Learning Plan Preview */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm flex flex-col justify-between gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2 font-extrabold text-lg text-brand-900">
+                    <BookOpen className="w-5 h-5 text-indigo-600" />
+                    Recommended Learning Plan
+                  </div>
+                  <button 
+                    onClick={() => onNavigate('learning')}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    Open Plan <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <span className="text-xs font-bold text-green-300 flex items-center gap-1">Explore Matches <ArrowRight className="w-3.5 h-3.5" /></span>
+
+                <div className="flex flex-col gap-3">
+                  {recommendedPlan.map((res) => (
+                    <div 
+                      key={res.id}
+                      className="p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{res.skill}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                          {res.source}
+                        </span>
+                      </div>
+                      <span className="font-extrabold text-sm text-brand-900 leading-snug">{res.title}</span>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{res.whyRecommended}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div 
-                onClick={() => onNavigate('learning-plan')}
-                className="bg-white/10 hover:bg-white/15 p-5 rounded-2xl border border-white/10 flex flex-col justify-between gap-4 cursor-pointer transition-all hover:scale-[1.02]"
+              <button
+                onClick={() => onNavigate('learning')}
+                className="w-full py-3 bg-brand-900 hover:bg-brand-800 text-white font-bold text-xs rounded-xl transition-all text-center flex items-center justify-center gap-2 shadow-md shadow-brand-900/10"
               >
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Step 3</span>
-                  <span className="font-extrabold text-sm">Generate Learning Plan</span>
-                  <p className="text-xs text-slate-300 leading-relaxed">Close remaining skill gaps with direct course and certification recommendations.</p>
-                </div>
-                <span className="text-xs font-bold text-amber-300 flex items-center gap-1">Open Learning Plan <ArrowRight className="w-3.5 h-3.5" /></span>
-              </div>
-
-              <div 
-                onClick={() => onNavigate('career-paths')}
-                className="bg-white/10 hover:bg-white/15 p-5 rounded-2xl border border-white/10 flex flex-col justify-between gap-4 cursor-pointer transition-all hover:scale-[1.02]"
-              >
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">Step 4</span>
-                  <span className="font-extrabold text-sm">Track Career Paths</span>
-                  <p className="text-xs text-slate-300 leading-relaxed">Inspect your readiness percentage for target tech industry roles.</p>
-                </div>
-                <span className="text-xs font-bold text-purple-300 flex items-center gap-1">View Careers <ArrowRight className="w-3.5 h-3.5" /></span>
-              </div>
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                Generate Personalized Learning Plan
+              </button>
             </div>
           </div>
 
-          {/* Raw Text Preview Toggle */}
+          {/* Raw Text Toggle */}
           <div className="flex justify-end">
             <button
               onClick={() => setShowRawText(!showRawText)}
