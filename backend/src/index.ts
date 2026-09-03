@@ -11,7 +11,24 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'skillmatch_jwt_secret_key';
 
-app.use(cors());
+const allowedOrigins = [
+  'https://eswaryadavhub.github.io',
+  'http://localhost:5173',
+  'http://localhost:5000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.github.io')) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Permissive fallback for seamless access
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Extend express Request to include user details
