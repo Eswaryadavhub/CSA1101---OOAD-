@@ -254,6 +254,9 @@ export function analyzeResume(text: string, currentStudentSkills: any[] = []): R
     'Full Stack', 'RESTful APIs', 'Agile', 'Scalable Systems'
   ]));
 
+  const detectedSkills = Array.from(detectedMap.values());
+  const newSkillsCount = detectedSkills.filter(s => !s.isExisting).length;
+
   // Categorize skills by explicit engineering domain
   const databases: string[] = [];
   const cloudTechnologies: string[] = [];
