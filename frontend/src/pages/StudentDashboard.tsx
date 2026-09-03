@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Award, CheckSquare, Target, MapPin, Clock, Bookmark, ChevronRight, AlertCircle, Briefcase } from 'lucide-react';
+import { User, Award, CheckSquare, Target, MapPin, Clock, Bookmark, ChevronRight, AlertCircle, Briefcase, Sparkles } from 'lucide-react';
 
 interface StudentDashboardProps {
   profile: any;
