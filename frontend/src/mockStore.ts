@@ -642,22 +642,35 @@ export const mockStore = {
   getAdminStatistics() {
     const opps = getStorage('opportunities', INITIAL_OPPORTUNITIES);
     return {
-      totalStudents: 142,
-      totalOpportunities: opps.length,
-      averageMatchScore: 78,
-      popularSkills: [
-        { name: 'Python', count: 98 },
-        { name: 'SQL', count: 86 },
-        { name: 'React', count: 74 },
-        { name: 'Java', count: 68 },
-        { name: 'Git', count: 65 },
-        { name: 'AWS', count: 42 },
-      ],
-      opportunityTypes: [
-        { type: 'Internship', count: opps.filter((o: any) => o.type === 'Internship').length },
-        { type: 'Job', count: opps.filter((o: any) => o.type === 'Job').length },
-        { type: 'Project', count: opps.filter((o: any) => o.type === 'Project').length },
-      ],
+      summary: {
+        totalStudents: 142,
+        totalOpportunities: opps.length,
+        totalSkills: 33,
+        totalMatches: 486,
+      },
+      charts: {
+        averageMatchScore: 78,
+        opportunityTypes: [
+          { name: 'Internship', value: opps.filter((o: any) => o.type === 'Internship').length },
+          { name: 'Job', value: opps.filter((o: any) => o.type === 'Job').length },
+          { name: 'Project', value: opps.filter((o: any) => o.type === 'Project').length },
+        ],
+        popularSkills: [
+          { name: 'Python', count: 98 },
+          { name: 'SQL', count: 86 },
+          { name: 'React', count: 74 },
+          { name: 'Java', count: 68 },
+          { name: 'Git', count: 65 },
+          { name: 'AWS', count: 42 },
+        ],
+        careerPathRecommendations: [
+          { name: 'Software Developer', students: 84 },
+          { name: 'Frontend Developer', students: 62 },
+          { name: 'Full Stack Developer', students: 58 },
+          { name: 'Data Analyst', students: 46 },
+          { name: 'Backend Developer', students: 39 },
+        ],
+      },
     };
   },
 
