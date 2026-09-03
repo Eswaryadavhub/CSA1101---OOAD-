@@ -60,6 +60,25 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         </button>
       </div>
 
+      {/* AI Resume Analyzer Callout */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50/70 to-purple-50/50 border border-blue-100 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/20">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-extrabold text-base text-brand-900">Import Skills from your Resume</span>
+            <span className="text-xs text-slate-500 font-medium">Upload your resume (PDF, DOCX, TXT) to automatically detect skills and instantly recalculate opportunity matches.</span>
+          </div>
+        </div>
+        <button
+          onClick={() => onNavigate('resume-analyzer')}
+          className="px-5 py-2.5 bg-brand-900 hover:bg-brand-800 text-white rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 shadow-md shadow-brand-900/10 hover:scale-[1.02]"
+        >
+          Launch Resume Analyzer <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       {/* Statistics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         {[

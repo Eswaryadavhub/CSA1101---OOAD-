@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Home, User, Award, Briefcase, Target, AlertTriangle, 
   TrendingUp, BookOpen, Bookmark, LogOut, Menu, X, Lock, 
-  MapPin, ShieldAlert, Sparkles, Send, Award as SkillsIcon
+  MapPin, ShieldAlert, Sparkles, Send, Award as SkillsIcon,
+  FileText
 } from 'lucide-react';
 import { api } from './api';
 
@@ -18,6 +19,46 @@ import { CareerPathsPage } from './pages/CareerPathsPage';
 import { LearningPlanPage } from './pages/LearningPlanPage';
 import { SavedOpportunitiesPage } from './pages/SavedOpportunitiesPage';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { ResumeAnalyzerPage } from './pages/ResumeAnalyzerPage';
+
+// App-wide ErrorBoundary to ensure white screen never occurs
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('SkillMatch UI Error Boundary caught an issue:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center flex flex-col items-center gap-4 max-w-md shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-extrabold text-brand-900">Rendering Safeguard</h2>
+            <p className="text-sm text-slate-500">A display issue was detected. Click below to return to the active view.</p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-6 py-2.5 bg-brand-900 hover:bg-brand-800 text-white font-bold rounded-xl text-sm transition-all"
+            >
+              Reload Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('landing');
@@ -162,6 +203,7 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
     { id: 'profile', label: 'My Profile', icon: <User className="w-5 h-5" /> },
     { id: 'skills', label: 'My Skills', icon: <Award className="w-5 h-5" /> },
+    { id: 'resume-analyzer', label: 'AI Resume Analyzer', icon: <FileText className="w-5 h-5" /> },
     { id: 'opportunities', label: 'Opportunities', icon: <Briefcase className="w-5 h-5" /> },
     { id: 'matches', label: 'Match Results', icon: <Target className="w-5 h-5" /> },
     { id: 'career', label: 'Career Paths', icon: <TrendingUp className="w-5 h-5" /> },
@@ -170,7 +212,8 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* LANDING PAGE ROUTE */}
       {currentPage === 'landing' && (
         <LandingPage 
@@ -291,6 +334,14 @@ export default function App() {
                 <SkillsPage 
                   skills={skills}
                   onSkillsUpdated={fetchStudentData}
+                />
+              )}
+
+              {currentPage === 'resume-analyzer' && user.role === 'STUDENT' && (
+                <ResumeAnalyzerPage 
+                  currentSkills={skills}
+                  onSkillsUpdated={fetchStudentData}
+                  onNavigate={(page) => setCurrentPage(page)}
                 />
               )}
 
@@ -433,6 +484,7 @@ export default function App() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

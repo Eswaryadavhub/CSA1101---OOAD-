@@ -618,9 +618,20 @@ export const mockStore = {
 
     const recommended = INITIAL_RESOURCES.filter(r => 
       gapNames.includes(r.skill.name.toLowerCase())
-    );
+    ).map(r => {
+      const matchingGap = gaps.find(g => g.name.toLowerCase() === r.skill.name.toLowerCase());
+      return {
+        ...r,
+        priority: matchingGap?.priority || 'Medium',
+      };
+    });
 
-    return recommended.length > 0 ? recommended : INITIAL_RESOURCES.slice(0, 6);
+    const fallbackList = INITIAL_RESOURCES.slice(0, 6).map(r => ({
+      ...r,
+      priority: 'Medium',
+    }));
+
+    return recommended.length > 0 ? recommended : fallbackList;
   },
 
   applyOpportunity(_opportunityId: string) {
